@@ -1,0 +1,62 @@
+{{define "Index"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flutter Package Syncer</title>
+  <link rel="icon" type="image/png" href="/views/assets/favicon.png">
+  <link id="theme-style" rel="stylesheet" href="/views/assets/css/style_dark.css">
+</head>
+<body>
+  
+  <div class="container">
+    <div style="text-align: right; margin-bottom: 1rem;">
+      <button id="theme-toggle-btn" class="button small">🌙 Dark Mode</button>
+    </div>
+    <div class="section">
+      <h2>Flutter doctor</h2>
+      <div class="card">
+        <div class="block">
+          <h2>Server:</h2>
+          <pre id="doctor-server">Loading server...</pre>
+        </div>
+        <div class="block">
+          <h2>Local:</h2>
+          <pre id="doctor-local">Loading local...</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2>Package Difference</h2>
+        <button class="button small" id="refresh-btn">♻️ Refresh</button>
+      </div>
+    
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="local-tab">Local</button>
+        <button class="tab-btn" data-tab="server-tab">Server</button>
+        <button class="tab-btn" data-tab="diff-tab">Difference</button>
+      </div>
+    
+      <div class="tab-content" id="local-tab">
+        <ul id="local-paths"><li>Waiting for refresh...</li></ul>
+      </div>
+      <div class="tab-content" id="server-tab" style="display: none;">
+        <ul id="server-paths"><li>Waiting for refresh...</li></ul>
+      </div>
+      <div class="tab-content" id="diff-tab" style="display: none;">
+        <ul id="package-diff"><li>Waiting for refresh...</li></ul>
+      </div>
+    
+      <br />
+      <button class="button" id="sync-btn">Sync Packages</button>
+    </div>
+  </div>
+
+  <script src="/views/assets/js/app.js"></script>
+  <script src="/views/assets/js/ui.js"></script>
+
+</body>
+</html>
+{{end}}
