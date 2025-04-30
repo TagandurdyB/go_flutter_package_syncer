@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
@@ -98,7 +101,7 @@ func (dashboard Dashboard) PackagesDiff(w http.ResponseWriter, r *http.Request, 
 	scanDirs := []string{
 		filepath.Join(homeDir, ".gradle"),
 		filepath.Join(homeDir, ".pub-cache"),
-		"./diff",
+		filepath.Join(homeDir, ".diff"),
 	}
 
 	var localPaths []string
@@ -223,4 +226,160 @@ func findDifferences(localPaths, serverPaths []string) (onlyInLocal, onlyInServe
 	}
 
 	return
+}
+
+func (dashboard Dashboard) Archive(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		http.Error(w, "Failed to get home directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Read only_in_local.txt
+	data, err := os.ReadFile("only_in_local.txt")
+	if err != nil {
+		http.Error(w, "Failed to read only_in_local.txt", http.StatusInternalServerError)
+		return
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+
+	// Create temp dir under current directory
+	tempDir := "./archive-temp"
+	err = os.MkdirAll(tempDir, 0755)
+	if err != nil {
+		http.Error(w, "Failed to create temp directory", http.StatusInternalServerError)
+		return
+	}
+	// defer os.RemoveAll(tempDir) // clean up after
+
+	// Copy each file
+	for _, relPath := range lines {
+		relPath = strings.TrimSpace(relPath)
+		if relPath == "" {
+			continue
+		}
+
+		sourcePath := filepath.Join(homeDir, relPath)
+		destPath := filepath.Join(tempDir, relPath)
+
+		// Ensure the directory exists
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			http.Error(w, "Failed to create destination directory: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Copy the file
+		err := helpers.CopyFile(sourcePath, destPath)
+		if err != nil {
+			http.Error(w, "Failed to copy file: "+sourcePath+" -> "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Now create the tar archive
+	tarPath := "packages.tar"
+	err = helpers.CompressToTarGz(tempDir, tarPath)
+	if err != nil {
+		http.Error(w, "Failed to create tar archive: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Remove temp directory
+	_ = os.RemoveAll(tempDir)
+
+	// Get file info for size and name
+	info, err := os.Stat(tarPath)
+	if err != nil {
+		http.Error(w, "Failed to stat tar file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with JSON info
+	response := map[string]interface{}{
+		"name": info.Name(),
+		"size": info.Size(),
+		"path": tarPath,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func (dashboard Dashboard) UploadPackages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	filePath := "packages.tar"
+	file, err := os.Open(filePath)
+	if err != nil {
+		http.Error(w, "Failed to open file", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+	// Prepare multipart form data
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(filePath))
+	if err != nil {
+		http.Error(w, "Failed to create form file", http.StatusInternalServerError)
+		return
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		http.Error(w, "Failed to copy file data", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Close()
+
+	// Send POST request to server
+	req, err := http.NewRequest("POST", "http://localhost:8099/api/upload", body)
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to send request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+func (dashboard Dashboard) SyncPackages(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// First request: Send to unpack API
+	resp, err := http.Post("http://localhost:8099/api/unpack", "application/json", nil)
+	if err != nil {
+		http.Error(w, "❌ Failed to sync with server: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		http.Error(w, fmt.Sprintf("❌ Server failed to unpack: %s", string(bodyBytes)), resp.StatusCode)
+		return
+	}
+
+	// Second request: Send to sync API (or any other endpoint)
+	resp2, err := http.Post("http://localhost:8099/api/sync", "application/json", nil)
+	if err != nil {
+		http.Error(w, "❌ Failed to sync with server: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp2.Body)
+		http.Error(w, fmt.Sprintf("❌ Server failed to sync: %s", string(bodyBytes)), resp2.StatusCode)
+		return
+	}
+
+	// ✅ Forward success response from the second API (sync API) to frontend
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, resp2.Body)
 }

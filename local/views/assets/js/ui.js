@@ -37,6 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sync-btn").addEventListener("click", syncPackages);
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  // loadFlutterDoctor(); // Loads local first inside this function
+  // loadPackageDiff();
+  document.getElementById("archive-btn").addEventListener("click", archive);
+});
+
 // Tab switch logic
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -59,17 +65,18 @@ document
   .getElementById("refresh-btn")
   .addEventListener("click", refreshPackageTabs);
 
-const themeBtn = document.getElementById("theme-toggle-btn");
-const themeLink = document.getElementById("theme-style");
-
-themeBtn.addEventListener("click", () => {
-  const isDark = themeLink.getAttribute("href").includes("style_dark.css");
-
-  if (isDark) {
-    themeLink.setAttribute("href", "/views/assets/css/style_light.css");
-    themeBtn.textContent = "☀️ Light Mode";
-  } else {
-    themeLink.setAttribute("href", "/views/assets/css/style_dark.css");
-    themeBtn.textContent = "🌙 Dark Mode";
-  }
-});
+  const themeBtn = document.getElementById("theme-toggle-btn");
+  const themeLink = document.getElementById("theme-style");
+  
+  themeBtn.addEventListener("click", () => {
+    const isDark = themeLink.getAttribute("href").includes("style_dark.css");
+  
+    if (isDark) {
+      themeLink.setAttribute("href", "/views/assets/css/style_light.css");
+      themeBtn.textContent = "☀️ Light Mode";
+    } else {
+      themeLink.setAttribute("href", "/views/assets/css/style_dark.css");
+      themeBtn.textContent = "🌙 Dark Mode";
+    }
+  });
+  

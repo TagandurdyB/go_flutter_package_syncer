@@ -2,8 +2,11 @@ package helpers
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
 func MkDir(path string) bool {
@@ -111,4 +114,73 @@ func AppendFile(fileName string, text string) {
 func DeleteFile(fileName string) {
 	err := os.Remove(fileName)
 	ErrH("Error deleteFile(", fileName, "): ", err)
+}
+
+func SyncFiles(srcDir, destDir string) error {
+	// Open the source directory
+	sourceDir, err := os.Open(srcDir)
+	if err != nil {
+		return fmt.Errorf("failed to open source directory: %v", err)
+	}
+	defer sourceDir.Close()
+
+	// Read the content of the source directory
+	files, err := sourceDir.Readdir(-1) // -1 to read all files
+	if err != nil {
+		return fmt.Errorf("failed to read source directory: %v", err)
+	}
+
+	// Iterate over each file in the source directory
+	for _, file := range files {
+		// Construct full file paths
+		srcFilePath := filepath.Join(srcDir, file.Name())
+		destFilePath := filepath.Join(destDir, file.Name())
+
+		// If it's a directory, recursively sync the contents
+		if file.IsDir() {
+			err := os.MkdirAll(destFilePath, 0755)
+			if err != nil {
+				return fmt.Errorf("failed to create directory %s: %v", destFilePath, err)
+			}
+			// Recursively sync the files in the subdirectory
+			err = SyncFiles(srcFilePath, destFilePath)
+			if err != nil {
+				return err
+			}
+		} else {
+			// It's a file, copy it to the destination
+			err := CopyFile(srcFilePath, destFilePath)
+			if err != nil {
+				return fmt.Errorf("failed to copy file %s to %s: %v", srcFilePath, destFilePath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// copyFile copies a single file from src to dest
+func CopyFile(src, dest string) error {
+	// Open the source file
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %v", err)
+	}
+	defer sourceFile.Close()
+
+	// Create the destination file
+	destFile, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %v", err)
+	}
+	defer destFile.Close()
+
+	// Copy the contents from source to destination
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy file contents: %v", err)
+	}
+
+	// Return success
+	return nil
 }

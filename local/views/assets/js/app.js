@@ -48,20 +48,44 @@ async function loadPackageDiff() {
 
 async function syncPackages() {
   const btn = document.getElementById("sync-btn");
+  const timerEl = document.getElementById("sync-timer");
+
   btn.disabled = true;
   btn.textContent = "Syncing...";
-  // Display "Waiting for refresh..." while data is loading
-  document.getElementById("local-paths").innerHTML =
-    "<li>Waiting for refresh...</li>";
-  document.getElementById("server-paths").innerHTML =
-    "<li>Waiting for refresh...</li>";
-  document.getElementById("package-diff").innerHTML =
-    "<li>Waiting for refresh...</li>";
-  await fetch("/api/sync-packages", { method: "POST" });
+
+  // Show and start timer
+  timerEl.style.display = "inline-block";
+  let seconds = 0;
+  timerEl.textContent = "Elapsed: 0s";
+
+  const interval = setInterval(() => {
+    seconds++;
+    timerEl.textContent = `Elapsed: ${seconds}s`;
+  }, 1000);
+
+  // Show loading placeholders
+  document.getElementById("local-paths").innerHTML = "<li>Waiting for refresh...</li>";
+  document.getElementById("server-paths").innerHTML = "<li>Waiting for refresh...</li>";
+  document.getElementById("package-diff").innerHTML = "<li>Waiting for refresh...</li>";
+
+  await fetch("/api/upload", { method: "POST" });
+  console.log("here 1")
+  await sync();
+  console.log("here 2")
   await loadPackageDiff();
+
+  clearInterval(interval);
+  timerEl.textContent = `Elapsed: ${seconds}s (done)`;
   btn.disabled = false;
   btn.textContent = "Sync Packages";
 }
+
+
+async function sync() {
+  const res = await fetch("/api/sync-packages");
+  const data = await res.json();
+}
+
 
 async function refreshPackageTabs() {
   // Display "Waiting for refresh..." while data is loading
@@ -134,4 +158,35 @@ async function refreshPackageTabs() {
     document.getElementById("package-diff").innerHTML =
       "<li>Error: Failed to load package diff.</li>";
   }
+}
+
+
+async function archive() {
+  const btn = document.getElementById("archive-btn");
+  btn.disabled = true;
+  btn.textContent = "Archiving...";
+
+  try {
+    const res = await fetch("/api/archive");
+    if (!res.ok) {
+      throw new Error("Failed to archive packages");
+    }
+    const data = await res.json(); // { name, size, path }
+
+    document.getElementById("archive-name").textContent = data.name;
+    document.getElementById("archive-size").textContent = (data.size / 1024).toFixed(2) + " KB";
+    document.getElementById("archive-path").textContent = data.path;
+
+    // Show the archive result
+    document.getElementById("archive-result").style.display = "block";
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("archive-result").innerHTML = 
+      "<p style='color:red;'>Failed to create archive.</p>";
+    document.getElementById("archive-result").style.display = "block";
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Archive Packages";
 }
