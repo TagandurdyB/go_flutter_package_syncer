@@ -5,10 +5,12 @@ import (
 	"net/http"
 
 	"flutter_package_syncer/config"
+	"flutter_package_syncer/helpers"
 )
 
 func main() {
+	helpers.InitEnv()
 	fmt.Println("Program is started!")
-	fmt.Println("You can acces from 127.0.0.1:8080")
-	http.ListenAndServe(":8080", config.Routes())
+	fmt.Println("You can acces from " + helpers.LocalDomain)
+	http.ListenAndServe(helpers.LocalDomain, config.Routes())
 }

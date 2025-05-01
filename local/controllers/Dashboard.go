@@ -76,7 +76,7 @@ func (dashboard Dashboard) FlutterDoctor(w http.ResponseWriter, r *http.Request,
 
 func serverFlutterDoctor() (string, error) {
 	// Send request
-	resp, err := http.Get("http://localhost:8099/api/flutter-doctor")
+	resp, err := http.Get("http://" + helpers.ServerDomain + "/api/flutter-doctor")
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +163,7 @@ func (dashboard Dashboard) PackagesDiff(w http.ResponseWriter, r *http.Request, 
 
 func downloadServerPaths() ([]string, error) {
 	// Send request
-	resp, err := http.Get("http://localhost:8099/api/get-paths")
+	resp, err := http.Get("http://" + helpers.ServerDomain + "/api/get-paths")
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,7 @@ func (dashboard Dashboard) UploadPackages(w http.ResponseWriter, r *http.Request
 	writer.Close()
 
 	// Send POST request to server
-	req, err := http.NewRequest("POST", "http://localhost:8099/api/upload", body)
+	req, err := http.NewRequest("POST", "http://"+helpers.ServerDomain+"/api/upload", body)
 	if err != nil {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
@@ -352,7 +352,7 @@ func (dashboard Dashboard) UploadPackages(w http.ResponseWriter, r *http.Request
 
 func (dashboard Dashboard) SyncPackages(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// First request: Send to unpack API
-	resp, err := http.Post("http://localhost:8099/api/unpack", "application/json", nil)
+	resp, err := http.Post("http://"+helpers.ServerDomain+"/api/unpack", "application/json", nil)
 	if err != nil {
 		http.Error(w, "❌ Failed to sync with server: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -366,7 +366,7 @@ func (dashboard Dashboard) SyncPackages(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Second request: Send to sync API (or any other endpoint)
-	resp2, err := http.Post("http://localhost:8099/api/sync", "application/json", nil)
+	resp2, err := http.Post("http://"+helpers.ServerDomain+"/api/sync", "application/json", nil)
 	if err != nil {
 		http.Error(w, "❌ Failed to sync with server: "+err.Error(), http.StatusInternalServerError)
 		return
