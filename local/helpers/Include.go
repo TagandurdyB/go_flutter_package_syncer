@@ -5,7 +5,7 @@ import (
 )
 
 func Include(path string) []string {
-	files, err := filepath.Glob("views/*.html")
+	files, err := filepath.Glob("views/templates/*.html")
 	ErrH("Error in Include: ", err)
 
 	path_files, err := filepath.Glob("views/" + path + "/*.html")

@@ -1,0 +1,14 @@
+{{define "RepoCloneInput"}}
+  <h1>Clone Flutter Repository</h1>
+  <form id="cloneForm">
+    <input
+      type="text"
+      id="repoUrl"
+      name="repoUrl"
+      placeholder="Enter Git repository URL..."
+      required
+    />
+    <button type="submit">Clone Repository</button>
+  </form>
+  <p id="statusMessage"></p>
+{{end}}

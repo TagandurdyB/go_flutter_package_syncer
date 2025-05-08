@@ -1,0 +1,16 @@
+{{define "Index"}}
+<!DOCTYPE html>
+<html lang="en">
+  {{template "Head"}}
+  <body>
+    {{template "Sidebar"}}
+    <div class="main-content">
+      <div class="container">
+        {{template "RepoCloneInput" .}}
+        {{template "RepoList" .}}
+      </div>
+    </div>
+    {{template "Scripts"}}
+  </body>
+</html>
+{{end}}

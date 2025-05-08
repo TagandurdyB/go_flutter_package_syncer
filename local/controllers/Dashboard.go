@@ -18,20 +18,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"flutter_package_syncer/helpers"
+	models "flutter_package_syncer/models"
 )
 
 type Dashboard struct{}
-
-type ResultMessage struct {
-	Local       string   `json:"local"`
-	Server      string   `json:"server"`
-	DiffMessage string   `json:"diff_message"`
-	Diff        []string `json:"diff"`
-}
-
-type DiffResponse struct {
-	Message string `json:"message"`
-}
 
 func (dashboard Dashboard) Index(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 
@@ -46,25 +36,60 @@ func (dashboard Dashboard) Index(w http.ResponseWriter, r *http.Request, params 
 	view.ExecuteTemplate(w, "Index", data)
 }
 
+func (dashboard Dashboard) Repos(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+
+	temp := helpers.Include("repos")
+
+	view, err := template.ParseFiles(temp...)
+
+	helpers.ErrH("Error in Dashboard Index: ", err)
+
+	data := make(map[string]interface{})
+	files, _ := os.ReadDir("storage/repos")
+	var repoNames []string
+	for _, f := range files {
+		if f.IsDir() {
+			repoNames = append(repoNames, f.Name())
+		}
+	}
+	data["Repos"] = repoNames
+
+	view.ExecuteTemplate(w, "Index", data)
+}
+
+func (dashboard Dashboard) Branchs(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	repoName := params.ByName("repo_name")
+	branch := params.ByName("branch")
+
+	temp := helpers.Include("branchs")
+	view, err := template.ParseFiles(temp...)
+	helpers.ErrH("Error in Dashboard Index: ", err)
+	data := map[string]interface{}{
+		"RepoName": repoName,
+		"Branch":   branch,
+	}
+	view.ExecuteTemplate(w, "Index", data)
+}
+
 func (dashboard Dashboard) FlutterDoctor(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	localOutput, err := exec.Command("flutter", "doctor").CombinedOutput()
 	if err != nil {
 		http.Error(w, "Failed to run flutter doctor locally: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	result := ResultMessage{
+	result := models.ResultMessage{
 		Local: string(localOutput),
 	}
 
 	// TODO: Replace with real remote/server logic
 	serverOutput, err := serverFlutterDoctor()
 	if err != nil {
-		result = ResultMessage{
+		result = models.ResultMessage{
 			Local:  string(localOutput),
 			Server: err.Error(),
 		}
 	} else {
-		result = ResultMessage{
+		result = models.ResultMessage{
 			Local:  string(localOutput),
 			Server: serverOutput,
 		}
@@ -132,7 +157,7 @@ func (dashboard Dashboard) PackagesDiff(w http.ResponseWriter, r *http.Request, 
 
 	serverPaths, err := downloadServerPaths()
 	if err != nil {
-		json.NewEncoder(w).Encode(ResultMessage{
+		json.NewEncoder(w).Encode(models.ResultMessage{
 			Local:       "Listed 234 local paths successful!",
 			Server:      "Server paths can't fetched!",
 			DiffMessage: "Server paths can't fetched!",
@@ -144,14 +169,14 @@ func (dashboard Dashboard) PackagesDiff(w http.ResponseWriter, r *http.Request, 
 	onlyInLocal, _ = findDifferences(localPaths, serverPaths)
 	err = os.WriteFile("only_in_local.txt", []byte(strings.Join(onlyInLocal, "\n")), 0644)
 	if err != nil {
-		json.NewEncoder(w).Encode(ResultMessage{
+		json.NewEncoder(w).Encode(models.ResultMessage{
 			Local:       "Listed " + strconv.Itoa(len(localPaths)) + " local paths successful!",
 			Server:      "Listed " + strconv.Itoa(len(serverPaths)) + " server paths successful!",
 			DiffMessage: "Failed to write differences!",
 			Diff:        onlyInLocal,
 		})
 	} else {
-		json.NewEncoder(w).Encode(ResultMessage{
+		json.NewEncoder(w).Encode(models.ResultMessage{
 			Local:       "Listed " + strconv.Itoa(len(localPaths)) + " local paths successful!",
 			Server:      "Listed " + strconv.Itoa(len(serverPaths)) + " server paths successful!",
 			DiffMessage: strconv.Itoa(len(onlyInLocal)) + " files found that do not exist on the server!",

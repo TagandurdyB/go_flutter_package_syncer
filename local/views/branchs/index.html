@@ -1,0 +1,103 @@
+<!-- {{define "BuildOptions"}}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Build Options</title>
+    <style>
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+        padding: 40px;
+      }
+
+      .card {
+        background: #1e1e1e;
+        border: 1px solid #444;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+      }
+
+      button {
+        padding: 10px 20px;
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #357ab8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Repo: {{.Repo}} | Branch: {{.Branch}}</h1>
+
+    <div class="card">
+      <h3>flutter pub get</h3>
+      <button onclick="runCommand('pubget')">Run</button>
+    </div>
+
+    <div class="card">
+      <h3>flutter build apk --release</h3>
+      <button onclick="runCommand('apk')">Run</button>
+    </div>
+
+    <div class="card">
+      <h3>flutter build appbundle --release</h3>
+      <button onclick="runCommand('appbundle')">Run</button>
+    </div>
+
+    <script>
+      function runCommand(cmd) {
+        fetch(`/api/build/{{.Repo}}/{{.Branch}}/${cmd}`, { method: 'POST' })
+          .then(res => res.text())
+          .then(text => alert(text))
+          .catch(err => alert("Error: " + err));
+      }
+    </script>
+  </body>
+</html>
+{{end}} -->
+
+{{define "Index"}}
+<!DOCTYPE html>
+<html lang="en">
+  {{template "Head"}}
+  <body>
+    {{template "Sidebar"}}
+    <div class="main-content">
+      <div class="container">
+        <h2>Flutter project: {{.RepoName}} / {{.Branch}}</h2>
+
+        <div class="build-actions">
+          <button onclick="runGitPull('{{.RepoName}}', '{{.Branch}}')">
+            📥 Git Pull
+          </button>
+          <button onclick="flutterPubGet('{{.RepoName}}')">
+            Flutter Pub Get
+          </button>
+          <button onclick="runBuild('{{.RepoName}}', '{{.Branch}}', 'apk')">
+            Build APK
+          </button>
+          <button
+            onclick="runBuild('{{.RepoName}}', '{{.Branch}}', 'appbundle')"
+          >
+            Build AppBundle
+          </button>
+        </div>
+
+        <div id="output" class="terminal-card" style="display: none">
+          <div id="terminal-header" class="terminal-header">Output</div>
+          <pre id="output-content" class="terminal-body">...</pre>
+        </div>
+      </div>
+    </div>
+    {{template "Scripts"}}
+  </body>
+</html>
+{{end}}

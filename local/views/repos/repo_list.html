@@ -1,0 +1,13 @@
+{{define "RepoList"}}
+  <h2 style="margin-top: 40px;">Cloned Repositories</h2>
+  <div class="repo-grid">
+    {{range .Repos}}
+    <div class="repo-card">
+      <h3>{{.}}</h3>
+      <button onclick="openBranches('{{.}}')">Open Branches</button>
+    </div>
+    {{else}}
+    <p>No repositories cloned yet.</p>
+    {{end}}
+  </div>
+{{end}}
